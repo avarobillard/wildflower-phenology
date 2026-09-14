@@ -1,0 +1,108 @@
+---
+title: "Drafting Visualizations"
+format: html
+---
+
+```{r}
+#| message: FALSE
+#| warning: FALSE
+# Import libraries
+library(tidyverse)
+library(here)
+library(ggplot2)
+library(plotly)
+
+# Read in data 
+bloom <- read_csv(here::here("data", "bloom_clean.csv"))
+```
+
+
+## Data exploration
+
+### Step 1: Collect statistics for use in header
+
+#### Total species count 
+How many unique species were observed over the full time period?
+```{r}
+# Count unique scientific names
+totalspecies <- bloom %>% 
+  summarise(unique_count = n_distinct(scientific_name))
+```
+-> 474 total species.
+
+#### Total observations
+How many plants were listed total over the full time period?
+```{r}
+# Number of rows where scientific name is not NA
+nrow(bloom %>% filter(!is.na(scientific_name)))
+```
+
+```{r}
+# Most observed plants each month (2011-2026)
+top_by_month <- bloom %>%
+  filter(!is.na(scientific_name)) %>%
+  mutate(month = month(date, label = TRUE)) %>%
+  count(month, scientific_name) %>%
+  group_by(month) %>%
+  slice_max(n, n = 1, with_ties = TRUE) %>%
+  ungroup()
+```
+
+```{r}
+# Unique observations
+unique <- bloom %>%
+  filter(!is.na(scientific_name)) %>%
+  mutate(year = year(date)) %>%
+  count(scientific_name) %>%
+  filter(n == 1) %>%
+  left_join(bloom %>% mutate(year = year(date)), by = "scientific_name") %>%
+  select(scientific_name, year, n)
+```
+
+```{r}
+# Top 10 most commonly noted plants over full data
+top10 <- bloom %>%
+  filter(!is.na(scientific_name)) %>%
+  count(scientific_name) %>%
+  slice_max(n, n = 10, with_ties = FALSE)
+```
+
+
+```{r}
+
+top4 <- top10 %>% slice_max(n, n = 4, with_ties = FALSE)
+
+grid_data <- bloom %>%
+  filter(scientific_name %in% top4$scientific_name) %>%
+  mutate(year = year(date), month = month(date, label = TRUE)) %>%
+  count(scientific_name, year, month) %>%
+  complete(scientific_name, year, month, fill = list(n = 0))
+
+p <- ggplot(grid_data, aes(x = month, y = factor(year), fill = n)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "grey90", high = "darkgreen") +
+  facet_wrap(~scientific_name) +
+  labs(x = "Month", y = "Year", fill = "Count")
+
+ggplotly(p)
+```
+
+
+```{r}
+bloom_shift <- bloom %>%
+  filter(scientific_name %in% top4$scientific_name) %>%
+  mutate(year = year(date)) %>%
+  filter(!year %in% c(2011, 2026)) %>%
+  mutate(day_of_year = yday(date)) %>%
+  group_by(scientific_name, year) %>%
+  summarise(first_seen = min(day_of_year), last_seen = max(day_of_year), .groups = "drop")
+
+p <- ggplot(bloom_shift, aes(x = year)) +
+  geom_line(aes(y = first_seen, linetype = "First observed")) +
+  geom_line(aes(y = last_seen, linetype = "Last observed")) +
+  facet_wrap(~scientific_name) +
+  labs(x = "Year", y = "Day of year", linetype = "")
+
+ggplotly(p)
+```
+

@@ -3,3 +3,64 @@ title: "Data Cleaning"
 format: html
 ---
 
+```{r, message = FALSE}
+# Import libraries
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+```
+
+
+```{r}
+#| message: FALSE
+# Read in data
+bloom <- read_csv(here::here("data", "whatsinbloom_2011-2026.csv"))
+
+#head(bloom)
+```
+
+### Convert date column to datetime
+
+```{r}
+# Clean date column
+bloom_clean <- bloom %>% 
+  mutate(date = lubridate::mdy(date))
+
+#head(bloom_clean)
+```
+### Pivot longer so that each plant observation is a row
+
+```{r}
+#| message: FALSE
+# Make lists of old column names
+old_photo <- paste0("image", 1:24)
+old_id    <- paste0("image", 1:24, "_id")
+old_name  <- paste0("image", 1:24, "_name")
+
+# Make lists of old column names
+new_photo <- paste0("photo-", 1:24)
+new_id    <- paste0("id-", 1:24)
+new_name  <- paste0("name-", 1:24)
+
+# Create final cleaned data set
+bloom_clean <- bloom_clean %>%
+  # rename each column type 
+  rename(!!!setNames(old_photo, new_photo)) %>%
+  rename(!!!setNames(old_id, new_id)) %>%
+  rename(!!!setNames(old_name, new_name)) %>%
+  # pivot
+  pivot_longer(
+    cols = c(all_of(new_photo), all_of(new_id), all_of(new_name)),
+    names_to = c(".value", "plant_number"),
+    names_sep = "-"
+  ) %>%
+  # final renaming of columns
+  rename(image = photo, image_id = id, scientific_name = name)
+```
+
+### Save as cleaned CSV
+```{r}
+write_csv(bloom_clean, here::here("data", "bloom_clean.csv"))
+```
+
