@@ -11,13 +11,42 @@ library(tidyverse)
 library(here)
 library(ggplot2)
 library(plotly)
+library(showtext)
 
 # Read in data 
 bloom <- read_csv(here::here("data", "bloom_clean.csv"))
+
+# Add fonts
+font_add_google(name = "Rubik", family = "rubik") # Headings and titles
+font_add_google(name = "Karla", family = "karla") # Subtitles, axes, and captions
+showtext_auto()
+
+# Create color palette 
+ bloom_palette <- c("Wildflower center green" = "#60721C", "White" = "#F9FAFA", "floral1" = "#EA71D5", "floral2" = "#F0A0C6")
+ 
+ 
+# Create list of common names to pull from as-needed
+ common_names <- tribble(
+  ~scientific_name,                       ~common_name,
+  "Salvia farinacea",                     "Mealy blue sage",
+  "Pavonia lasiopetala",                  "Rock rose",
+  "Berlandiera lyrata",                   "Chocolate daisy",
+  "Malvaviscus arboreus var. drummondii", "Turk's cap",
+  "Conoclinium dissectum",                "Gregg's mistflower",
+  "Salvia greggii",                       "Autumn sage",
+  "Echinacea purpurea",                   "Purple coneflower",
+  "Lupinus texensis",                     "Bluebonnet",
+  "Glandularia bipinnatifida",            "Prairie verbena",
+  "Lantana urticoides",                   "Texas lantana",
+  "Ilex decidua",                         "Possumhaw",
+  "Gelsemium sempervirens",               "Carolina Jessamine",
+  "Liatris punctata var. mucronata",      "Texas blazing star",
+  "Senna lindheimeriana",                 "Lindheimer's senna",
+  "Helianthus maximiliani",               "Maximilian sunflower",
+  "Ilex vomitoria",                       "Yaupon holly",
+  "Viguiera stenoloba",                   "Skeleton-leaf goldeneye"
+)
 ```
-
-
-## Data exploration
 
 ### Step 1: Collect statistics for use in header
 
@@ -37,17 +66,7 @@ How many plants were listed total over the full time period?
 nrow(bloom %>% filter(!is.na(scientific_name)))
 ```
 
-```{r}
-# Most observed plants each month (2011-2026)
-top_by_month <- bloom %>%
-  filter(!is.na(scientific_name)) %>%
-  mutate(month = month(date, label = TRUE)) %>%
-  count(month, scientific_name) %>%
-  group_by(month) %>%
-  slice_max(n, n = 1, with_ties = TRUE) %>%
-  ungroup()
-```
-
+#### Number of plants observed once
 ```{r}
 # Unique observations
 unique <- bloom %>%
@@ -57,16 +76,47 @@ unique <- bloom %>%
   filter(n == 1) %>%
   left_join(bloom %>% mutate(year = year(date)), by = "scientific_name") %>%
   select(scientific_name, year, n)
+
+nrow(unique)
 ```
 
+### Step 2: Bar plot of top species
+
+#### What were the top 10 most commonly noted plants over full time period?
 ```{r}
 # Top 10 most commonly noted plants over full data
 top10 <- bloom %>%
   filter(!is.na(scientific_name)) %>%
   count(scientific_name) %>%
   slice_max(n, n = 10, with_ties = FALSE)
+
+# Add common names for plotting
+top10 <- top10 %>% 
+  left_join(common_names, by = "scientific_name")
 ```
 
+```{r}
+# Create bar plot
+p1 <- ggplot(top10, aes(x = common_name, y = n)) +
+  geom_col(fill = bloom_palette[4]) +
+  labs(title = "What were the top 10 most commonly listed plants?",
+       subtitle = "These 10 plants were noted by volunteers over 100 times between the years of 2011 and 2026,\nmeaning they are very commonly in bloom, growing, making seeds, or otherwise noticable!",
+       x = NULL,
+       y = "Count") +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 35, hjust = 1),
+    plot.title = element_text(family = "rubik", face = "bold", size = rel(1.9), margin = margin(b = 6)),
+    plot.subtitle = element_text(family = "karla", size = rel(1.2)))
+
+p1
+
+ggsave(here("figures", "top10bar.pdf"), width = 10, height = 8, dpi = 150, bg = "white")
+```
+
+### Step 3: Phenology heat maps
+
+#### Are there any changing seasonal patterns in the most common species?
 
 ```{r}
 
@@ -104,5 +154,23 @@ p <- ggplot(bloom_shift, aes(x = year)) +
   labs(x = "Year", y = "Day of year", linetype = "")
 
 ggplotly(p)
+```
+
+### Step 4: Bar plot of monthly plants
+
+#### What were the most commonly observed plants in each month of the year?
+
+```{r}
+# Most observed plants each month (2011-2026)
+top_by_month <- bloom %>%
+  filter(!is.na(scientific_name)) %>%
+  mutate(month = month(date, label = TRUE)) %>%
+  count(month, scientific_name) %>%
+  group_by(month) %>%
+  slice_max(n, n = 1, with_ties = TRUE) %>%
+  ungroup()
+
+top_by_month <- top_by_month %>% 
+  left_join(common_names, by = "scientific_name")
 ```
 
