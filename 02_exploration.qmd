@@ -12,6 +12,7 @@ library(here)
 library(ggplot2)
 library(plotly)
 library(showtext)
+library(ggtext)
 
 # Read in data 
 bloom <- read_csv(here::here("data", "bloom_clean.csv"))
@@ -22,7 +23,21 @@ font_add_google(name = "Karla", family = "karla") # Subtitles, axes, and caption
 showtext_auto()
 
 # Create color palette 
- bloom_palette <- c("Wildflower center green" = "#60721C", "White" = "#F9FAFA", "floral1" = "#EA71D5", "floral2" = "#F0A0C6")
+ bloom_palette <- c("Wildflower center green" = "#60721C", "White" = "#F9FAFA", "floral1" = "#EA71D5", "floral2" = "#F0A0C6", "floral3" = "#5F7ECB")
+ 
+ # Select species colors for plot- color picked from flower images
+species_colors <- c(
+  "Turk's cap" = "#FA3B25",
+  "Texas lantana" = "#F9740A",
+  "Rock rose" = "#F865AE",
+  "Purple coneflower" = "#E49CEC",
+  "Prairie verbena" = "#7D7ADA",
+  "Mealy blue sage" = "#5677EE",
+  "Gregg's mistflower" = "#BDB7DB",
+  "Chocolate daisy" = "#D9C703",
+  "Bluebonnet" = "#0B67BF",
+  "Autumn sage" = "#DE03B5"
+)
  
  
 # Create list of common names to pull from as-needed
@@ -97,66 +112,246 @@ top10 <- top10 %>%
 
 ```{r}
 # Create bar plot
-p1 <- ggplot(top10, aes(x = common_name, y = n)) +
-  geom_col(fill = bloom_palette[4]) +
-  labs(title = "What were the top 10 most commonly listed plants?",
-       subtitle = "These 10 plants were noted by volunteers over 100 times between the years of 2011 and 2026,\nmeaning they are very commonly in bloom, growing, making seeds, or otherwise noticable!",
-       x = NULL,
-       y = "Count") +
+p1 <- ggplot(top10, aes(x = fct_reorder(common_name, n, .desc = TRUE), y = n, fill = common_name)) +
+  geom_col(alpha = 0.75) +
+  scale_fill_manual(values = species_colors, guide = "none") +
+  labs(x = NULL,
+       y = NULL) +
   theme_minimal(base_size = 12) +
   theme(
-    axis.text.x = element_text(angle = 35, hjust = 1),
     plot.title = element_text(family = "rubik", face = "bold", size = rel(1.9), margin = margin(b = 6)),
-    plot.subtitle = element_text(family = "karla", size = rel(1.2)))
+    plot.subtitle = element_text(family = "karla", size = rel(1.2)),
+    axis.text.x = element_text(angle = 35, hjust = 1, size = 12.5, family = "karla"),
+    axis.text.y = element_text(size = 12.5, family = "karla"))
 
 p1
 
-ggsave(here("figures", "top10bar.pdf"), width = 10, height = 8, dpi = 150, bg = "white")
+ggsave(here("figures", "top10bar.pdf"), width = 10, height = 8, dpi = 150, bg = "white", device = cairo_pdf)
 ```
+
 
 ### Step 3: Phenology heat maps
 
 #### Are there any changing seasonal patterns in the most common species?
 
 ```{r}
-
-top4 <- top10 %>% slice_max(n, n = 4, with_ties = FALSE)
-
-grid_data <- bloom %>%
-  filter(scientific_name %in% top4$scientific_name) %>%
-  mutate(year = year(date), month = month(date, label = TRUE)) %>%
+# Filter data to top 4 most common species
+heatmap_data1 <- bloom %>% 
+  filter(scientific_name %in% c("Salvia farinacea")) %>% 
+  mutate(year = year(date), month = month(date, label = TRUE)) %>% 
   count(scientific_name, year, month) %>%
   complete(scientific_name, year, month, fill = list(n = 0))
 
-p <- ggplot(grid_data, aes(x = month, y = factor(year), fill = n)) +
-  geom_tile(color = "white") +
-  scale_fill_gradient(low = "grey90", high = "darkgreen") +
-  facet_wrap(~scientific_name) +
-  labs(x = "Month", y = "Year", fill = "Count")
+#.........................create heatmap.........................
+p2 <- ggplot(heatmap_data1, aes(x = month, y = year, fill = n)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  labs(fill = "Observation count",
+       title = "**Mealy blue sage** <span style='font-size:14pt'>*(Salvia farinacea)*</span>") + 
+  scale_fill_gradientn(colors = c("#faeef0", bloom_palette[5])) +
+  scale_y_continuous(breaks = seq(2012, 2026, by = 2)) +
+  guides(fill = guide_colorbar(barwidth = 15, barheight = 0.75, title.position = "top")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(family = "karla", hjust = 0.5),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(family = "karla"),
+    plot.title = element_markdown(family = "rubik", size = rel(1.8), margin = margin(b = 6)),
+    plot.subtitle = element_text(family = "karla", size = rel(1.2)),
+  )
 
-ggplotly(p)
+p2
+
+ggsave(here("figures", "heatmap1.pdf"), width = 10, height = 10, dpi = 150, bg = "white")
+```
+
+```{r}
+heatmap_data2 <- bloom %>% 
+  filter(scientific_name %in% c("Pavonia lasiopetala")) %>% 
+  mutate(year = year(date), month = month(date, label = TRUE)) %>% 
+  count(scientific_name, year, month) %>%
+  complete(scientific_name, year, month, fill = list(n = 0))
+
+#.........................create heatmap.........................
+p3 <- ggplot(heatmap_data2, aes(x = month, y = year, fill = n)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  labs(fill = "Observation count") + 
+  scale_fill_gradientn(colors = c("#f5e1f0", "#F89BEA", "#FC47B0")) +
+  scale_y_continuous(breaks = seq(2012, 2026, by = 2)) +
+  guides(fill = guide_colorbar(barwidth = 15, barheight = 0.75, title.position = "top")) +
+  scale_x_discrete(expand = c(0, 0)) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(family = "karla", hjust = 0.5, size = 24),
+    legend.text = element_text(family = "karla", size = 16),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(family = "karla", size = 20, margin = margin(t = -10)),
+    axis.text.y = element_text(family = "karla", size = 20)
+  )
+
+ggsave(here("figures", "rockrose.pdf"), width = 10, height = 10, dpi = 150, bg = "white")
 ```
 
 
 ```{r}
-bloom_shift <- bloom %>%
-  filter(scientific_name %in% top4$scientific_name) %>%
-  mutate(year = year(date)) %>%
-  filter(!year %in% c(2011, 2026)) %>%
-  mutate(day_of_year = yday(date)) %>%
-  group_by(scientific_name, year) %>%
-  summarise(first_seen = min(day_of_year), last_seen = max(day_of_year), .groups = "drop")
+heatmap_data3 <- bloom %>% 
+  filter(scientific_name %in% c("Berlandiera lyrata")) %>% 
+  mutate(year = year(date), month = month(date, label = TRUE)) %>% 
+  count(scientific_name, year, month) %>%
+  complete(scientific_name, year, month, fill = list(n = 0))
 
-p <- ggplot(bloom_shift, aes(x = year)) +
-  geom_line(aes(y = first_seen, linetype = "First observed")) +
-  geom_line(aes(y = last_seen, linetype = "Last observed")) +
-  facet_wrap(~scientific_name) +
-  labs(x = "Year", y = "Day of year", linetype = "")
+#.........................create heatmap.........................
+p4 <- ggplot(heatmap_data3, aes(x = month, y = year, fill = n)) +
+  geom_tile() +
+  labs(fill = "Observation count",
+       title = "**Chocolate daisy** <span style='font-size:14pt'>*(Berlandiera lyrata)*</span>") + 
+  scale_fill_gradientn(colors = c("#faeef0", bloom_palette[4], bloom_palette[3])) +
+  scale_y_continuous(breaks = seq(2012, 2026, by = 2)) +
+  guides(fill = guide_colorbar(barwidth = 15, barheight = 0.75, title.position = "top")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(family = "karla", hjust = 0.5),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(family = "karla"),
+    plot.title = element_markdown(family = "rubik", size = rel(1.8), margin = margin(b = 6)),
+    plot.subtitle = element_text(family = "karla", size = rel(1.2)),
+  )
 
-ggplotly(p)
+p4
+
+ggsave(here("figures", "heatmap3.pdf"), width = 10, height = 8, dpi = 150, bg = "white")
+```
+```{r}
+heatmap_data4 <- bloom %>% 
+  filter(scientific_name %in% c("Malvaviscus arboreus var. drummondii")) %>% 
+  mutate(year = year(date), month = month(date, label = TRUE)) %>% 
+  count(scientific_name, year, month) %>%
+  complete(scientific_name, year, month, fill = list(n = 0))
+
+#.........................create heatmap.........................
+p5 <- ggplot(heatmap_data4, aes(x = month, y = year, fill = n)) +
+  geom_tile() +
+  labs(fill = "Observation count",
+       title = "**Turk's cap** <span style='font-size:14pt'>*(Malvaviscus arboreus var. drummondii)*</span>") + 
+  scale_fill_gradientn(colors = c("#faeef0", bloom_palette[4], bloom_palette[3])) +
+  scale_y_continuous(breaks = seq(2012, 2026, by = 2)) +
+  guides(fill = guide_colorbar(barwidth = 15, barheight = 0.75, title.position = "top")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(family = "karla", hjust = 0.5),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(family = "karla"),
+    plot.title = element_markdown(family = "rubik", size = rel(1.8), margin = margin(b = 6)),
+    plot.subtitle = element_text(family = "karla", size = rel(1.2)),
+  )
+
+p5
+
+ggsave(here("figures", "heatmap4.pdf"), width = 10, height = 8, dpi = 150, bg = "white")
 ```
 
-### Step 4: Bar plot of monthly plants
+
+```{r}
+heatmap_data5 <- bloom %>% 
+  filter(scientific_name %in% c("Lantana urticoides")) %>% 
+  mutate(year = year(date), month = month(date, label = TRUE)) %>% 
+  count(scientific_name, year, month) %>%
+  complete(scientific_name, year, month, fill = list(n = 0))
+
+#.........................create heatmap.........................
+p3 <- ggplot(heatmap_data5, aes(x = month, y = year, fill = n)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  labs(fill = "Observation count",
+       title = "**Texas Lantana** <span style='font-size:14pt'>*(Pavonia lasiopetala)*</span>") + 
+  scale_fill_gradientn(colors = c("#f7fbe8","#E2C400", "#F3A404", "#F9740A")) +
+  scale_y_continuous(breaks = seq(2012, 2026, by = 2)) +
+  guides(fill = guide_colorbar(barwidth = 15, barheight = 0.75, title.position = "top")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(family = "karla", hjust = 0.5),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(family = "karla"),
+    plot.title = element_markdown(family = "rubik", size = rel(1.8), margin = margin(b = 6)),
+    plot.subtitle = element_text(family = "karla", size = rel(1.2)),
+  )
+
+p3
+
+ggsave(here("figures", "heatmap5.pdf"), width = 10, height = 10, dpi = 150, bg = "white")
+```
+
+### Step 4: Bloom calendar heatmap
+
+#### When were the top 10 most common plants blooming throughout the year?
+
+```{r}
+# Count of observations of each species each month
+species_month_counts <- bloom %>%
+  mutate(month = month(date, label = TRUE)) %>%
+  count(scientific_name, month)
+
+# Fill all missing months with 0
+species_month_counts <- species_month_counts %>%
+  complete(scientific_name, month, fill = list(n = 0))
+
+# Filter to just top 10 most common species
+species_month_counts <- species_month_counts %>%
+  filter(scientific_name %in% top10$scientific_name) %>%
+  left_join(common_names, by = "scientific_name")
+
+```
+
+```{r}
+# Test plot
+ggplot(species_month_counts, aes(x = month, y = common_name, fill = n)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  scale_fill_gradient(low = "white", high = "darkgreen") +
+  theme_minimal() +
+  labs(x = NULL, y = NULL, fill = "Observations")
+```
+
+```{r}
+# Design heatmap
+species_month_counts <- species_month_counts %>%
+  mutate(common_name = fct_reorder(common_name, n, .fun = sum, .desc = TRUE)) %>% 
+  group_by(common_name) %>%
+  mutate(
+    tile_color = {
+      ramp <- colorRampPalette(c("#899E2E", species_colors[as.character(common_name[1])]))
+      ramp(100)[as.integer(scales::rescale(n, to = c(1, 100)))]
+    }
+  ) %>%
+  ungroup()
+
+ggplot(species_month_counts, aes(x = as.numeric(month), y = 1, fill = tile_color)) +
+  geom_raster(interpolate = TRUE) +
+  scale_fill_identity() +
+  facet_wrap(~common_name, ncol = 1, strip.position = "left") +
+  scale_x_continuous(breaks = 1:12, labels = month.abb, expand = c(0, 0)) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 16, family = "karla"),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    strip.text.y.left = element_text(angle = 0, hjust = 1, size = 13, family = "karla"),
+    panel.spacing = unit(0, "lines")
+  ) +
+  labs(x = NULL, y = NULL)
+
+ ggsave(here("figures", "seasonalheatmap.pdf"), width = 19, height = 6, dpi = 150)
+```
+
+
+### Step 5: Plot of monthly plants
 
 #### What were the most commonly observed plants in each month of the year?
 
