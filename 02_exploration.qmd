@@ -25,7 +25,7 @@ showtext_auto()
 # Create color palette 
  bloom_palette <- c("Wildflower center green" = "#60721C", "White" = "#F9FAFA", "floral1" = "#EA71D5", "floral2" = "#F0A0C6", "floral3" = "#5F7ECB")
  
- # Select species colors for plot- color picked from flower images
+ # Select species colors for plot- color matche from flower images
 species_colors <- c(
   "Turk's cap" = "#FA3B25",
   "Texas lantana" = "#F9740A",
@@ -192,6 +192,8 @@ p3 <- ggplot(heatmap_data2, aes(x = month, y = year, fill = n)) +
     axis.text.y = element_text(family = "karla", size = 20)
   )
 
+p3
+
 ggsave(here("figures", "rockrose.pdf"), width = 10, height = 10, dpi = 150, bg = "white")
 ```
 
@@ -266,7 +268,7 @@ heatmap_data5 <- bloom %>%
   complete(scientific_name, year, month, fill = list(n = 0))
 
 #.........................create heatmap.........................
-p3 <- ggplot(heatmap_data5, aes(x = month, y = year, fill = n)) +
+p6 <- ggplot(heatmap_data5, aes(x = month, y = year, fill = n)) +
   geom_tile(color = "white", linewidth = 0.5) +
   labs(fill = "Observation count",
        title = "**Texas Lantana** <span style='font-size:14pt'>*(Pavonia lasiopetala)*</span>") + 
@@ -284,7 +286,7 @@ p3 <- ggplot(heatmap_data5, aes(x = month, y = year, fill = n)) +
     plot.subtitle = element_text(family = "karla", size = rel(1.2)),
   )
 
-p3
+p6
 
 ggsave(here("figures", "heatmap5.pdf"), width = 10, height = 10, dpi = 150, bg = "white")
 ```
@@ -347,7 +349,7 @@ ggplot(species_month_counts, aes(x = as.numeric(month), y = 1, fill = tile_color
   ) +
   labs(x = NULL, y = NULL)
 
- ggsave(here("figures", "seasonalheatmap.pdf"), width = 19, height = 6, dpi = 150)
+ ggsave(here("figures", "seasonalheatmap.pdf"), width = 19, height = 6, dpi = 300)
 ```
 
 
