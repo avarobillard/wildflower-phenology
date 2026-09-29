@@ -14,6 +14,8 @@ This repository contains an analysis of a provided dataset of plants in bloom at
 wildflower-phenology
 ├── README.md
 ├── data
+├── figures
+├── fonts
 ├── assets 
 ├── 01_datacleaning.qmd   # Data cleaning
 ├── 02_exploration.qmd    # Drafting preliminary visualizations
