@@ -2,9 +2,11 @@
 
 Author: Ava Robillard
 
-This repository contains an analysis of a provided dataset of plants in bloom at the Wildflower Center from 2011 to 2026, answering questions related to changes in phenology over time and the most commonly observed species throughout the year. The plots created in this repository will be used in an infographic design in Affinity.
-
 <img src="./assets/wildflower.jpeg" alt="Wildflowers at the Center" width="300" height="200"/>
+
+This repository contains an analysis of a provided dataset of plants in bloom at the Wildflower Center from 2011 to 2026, answering questions related to changes in phenology over time and the most commonly observed species throughout the year. The plots created in this repository were used in an infographic design in Affinity.
+
+<img src="./assets/Infographicdraft.png"/>
 
 ## Repository Structure
 
